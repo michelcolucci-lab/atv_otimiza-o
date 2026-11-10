@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caderno de Bordo – Um blog sobre ideias, viagens e cotidiano</title>
+  <meta name="description" content="Caderno de Bordo: textos sobre ideias, viagens, tecnologia e cotidiano.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/stylesheet.css">
+  <script>/* =========================================================
+   BLOGSEM FILTRO - SCRIPT JAVASCRIPT
+   ========================================================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const cards = Array.from(document.querySelectorAll(".card"));
+    const grade = document.querySelector(".grade");
+    const postsSection = document.querySelector("#posts");
+    const paginacao = document.querySelector(".paginacao");
+
+    const linksCategorias = document.querySelectorAll(".lista-categorias a");
+    const linksTags = document.querySelectorAll(".tags a");
+
+    const botaoDestaque = document.querySelector(".hero .botao");
+    const linksLogo = document.querySelectorAll(".logo");
+
+    if (!grade || !paginacao) return;
+
+    const ITENS_POR_PAGINA = 2;
+
+    let paginaAtual = 1;
+    let categoriaAtiva = "";
+    let tagAtiva = "";
+
+    // Armazena as informações dos artigos
+    const posts = cards.map(card => ({
+        elemento: card,
+        categoria: card.querySelector(".categoria")
+            ?.textContent.trim().toLowerCase() || "",
+        texto: card.textContent.toLowerCase()
+    }));
+
+    let postsFiltrados = [...posts];
+
+    // Atualiza os artigos exibidos
+    function atualizarPosts() {
+
+        const totalPaginas = Math.max(
+            1,
+            Math.ceil(postsFiltrados.length / ITENS_POR_PAGINA)
+        );
+
+        if (paginaAtual > totalPaginas) {
+            paginaAtual = totalPaginas;
+        }
+
+        // Esconde todos os artigos
+        posts.forEach(post => {
+            post.elemento.hidden = true;
+        });
+
+        // Calcula quais artigos devem aparecer
+        const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+
+        const postsDaPagina = postsFiltrados.slice(
+            inicio,
+            inicio + ITENS_POR_PAGINA
+        );
+
+        // Exibe os artigos da página atual
+        postsDaPagina.forEach(post => {
+            post.elemento.hidden = false;
+        });
+
+        atualizarPaginacao(totalPaginas);
+
+        // Verifica se existem artigos encontrados
+        let mensagem = document.querySelector(
+            ".mensagem-sem-resultados"
+        );
+
+        if (postsFiltrados.length === 0) {
+
+            if (!mensagem) {
+                mensagem = document.createElement("p");
+
+                mensagem.className = "mensagem-sem-resultados";
+
+                mensagem.textContent =
+                    "Nenhum artigo encontrado para este filtro.";
+
+                grade.appendChild(mensagem);
+            }
+
+        } else if (mensagem) {
+            mensagem.remove();
+        }
+    }
+
+    // Cria e atualiza os botões da paginação
+    function atualizarPaginacao(totalPaginas) {
+
+        paginacao.innerHTML = "";
+
+        for (let numero = 1; numero <= totalPaginas; numero++) {
+
+            const link = document.createElement("a");
+
+            link.href = "#posts";
+            link.textContent = numero;
+
+            if (numero === paginaAtual) {
+                link.classList.add("ativa");
+                link.setAttribute("aria-current", "page");
+            }
+
+            link.addEventListener("click", evento => {
+
+                evento.preventDefault();
+
+                paginaAtual = numero;
+
+                atualizarPosts();
+
+                postsSection.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+            });
+
+            paginacao.appendChild(link);
+        }
+
+        // Botão para avançar de página
+        if (totalPaginas > 1) {
+
+            const proxima = document.createElement("a");
+
+            proxima.href = "#posts";
+            proxima.textContent = "Próxima →";
+
+            proxima.addEventListener("click", evento => {
+
+                evento.preventDefault();
+
+                if (paginaAtual < totalPaginas) {
+
+                    paginaAtual++;
+
+                    atualizarPosts();
+
+                    postsSection.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+                }
+            });
+
+            paginacao.appendChild(proxima);
+        }
+    }
+
+    // Aplica os filtros selecionados
+    function aplicarFiltros() {
+
+        postsFiltrados = posts.filter(post => {
+
+            const correspondeCategoria =
+                !categoriaAtiva ||
+                post.categoria === categoriaAtiva;
+
+            const correspondeTag =
+                !tagAtiva ||
+                post.texto.includes(tagAtiva);
+
+            return correspondeCategoria && correspondeTag;
+        });
+
+        paginaAtual = 1;
+
+        atualizarPosts();
+    }
+
+    // Filtro por categorias
+    linksCategorias.forEach(link => {
+
+        link.addEventListener("click", evento => {
+
+            evento.preventDefault();
+
+            const categoria = link.childNodes[0]
+                .textContent.trim().toLowerCase();
+
+            categoriaAtiva =
+                categoriaAtiva === categoria ? "" : categoria;
+
+            tagAtiva = "";
+
+            aplicarFiltros();
+
+            postsSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        });
+    });
+
+    // Filtro por tags
+    linksTags.forEach(link => {
+
+        link.addEventListener("click", evento => {
+
+            evento.preventDefault();
+
+            const tag = link.textContent.trim().toLowerCase();
+
+            tagAtiva = tagAtiva === tag ? "" : tag;
+
+            categoriaAtiva = "";
+
+            aplicarFiltros();
+
+            postsSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        });
+    });
+
+    // Botão do artigo em destaque
+    if (botaoDestaque) {
+
+        botaoDestaque.addEventListener("click", evento => {
+
+            evento.preventDefault();
+
+            postsSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        });
+    }
+
+    // Logo retorna ao início da página
+    linksLogo.forEach(logo => {
+
+        logo.addEventListener("click", evento => {
+
+            evento.preventDefault();
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        });
+    });
+
+    document.querySelectorAll(".card h3 a").forEach(link => {
+
+        link.addEventListener("click", evento => {
+
+            if (link.getAttribute("href") === "#") {
+                evento.preventDefault();
+            }
+        });
+    });
+
+    atualizarPosts();
+
+});</script>
+</head>
+<body>
+
+  <header class="topo">
+    <div class="container topo__conteudo">
+      <a href="#" class="logo">Blog<span>sem</span>Filtro</a>
+      <nav class="menu" aria-label="Navegação principal">
+        <a href="#inicio">Início</a>
+        <a href="#posts">Posts</a>
+        <a href="#sobre">Sobre</a>
+        <a href="#newsletter">Newsletter</a>
+        <a href="#contato">Contato</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    
+    <section class="hero" id="inicio">
+      <div class="container hero__conteudo">
+        <span class="etiqueta">Destaque da semana</span>
+        <h1>Escrever devagar num mundo que tem pressa</h1>
+        <p class="hero__resumo">Sobre como reservar quinze minutos por dia para pensar no papel mudou a forma como eu trabalho, leio e me relaciono com o tempo.</p>
+        <div class="hero__meta">
+          <span>Por <strong>Ana Souza</strong></span>
+          <span>•</span>
+          <span>27 de outubro de 2026</span>
+          <span>•</span>
+          <span>6 min de leitura</span>
+        </div>
+        <a href="#" class="botao">Ler artigo completo</a>
+      </div>
+    </section>
+
+    <div class="container layout">
+
+      <section class="posts" id="posts">
+        <h2 class="titulo-secao">Últimos textos</h2>
+
+        <div class="grade">
+          <article class="card">
+            <div class="card__capa capa-1"></div>
+            <div class="card__corpo">
+              <span class="categoria">Viagens</span>
+              <h3><a href="#">Três dias em uma cidade pequena e o que ela me ensinou</a></h3>
+              <p>Sem roteiro fechado, sem pressa e com muito café: um diário de bordo de um fim de semana prolongado.</p>
+              <div class="card__rodape">
+                <span>22 out 2026</span>
+                <span>4 min</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__capa capa-2"></div>
+            <div class="card__corpo">
+              <span class="categoria">Tecnologia</span>
+              <h3><a href="#">Ferramentas simples que uso para organizar minhas ideias</a></h3>
+              <p>Não precisa de aplicativo caro. Veja o que realmente funciona no meu dia a dia.</p>
+              <div class="card__rodape">
+                <span>18 out 2026</span>
+                <span>5 min</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__capa capa-3"></div>
+            <div class="card__corpo">
+              <span class="categoria">Cotidiano</span>
+              <h3><a href="#">Pequenos rituais da manhã que valem a pena</a></h3>
+              <p>Uma lista honesta do que ficou na minha rotina depois de meses de teste.</p>
+              <div class="card__rodape">
+                <span>12 out 2026</span>
+                <span>3 min</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__capa capa-4"></div>
+            <div class="card__corpo">
+              <span class="categoria">Livros</span>
+              <h3><a href="#">Cinco leituras que mudaram meu jeito de pensar</a></h3>
+              <p>Dos clássicos aos lançamentos: livros que recomendo sem pensar duas vezes.</p>
+              <div class="card__rodape">
+                <span>05 out 2026</span>
+                <span>7 min</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__capa capa-5"></div>
+            <div class="card__corpo">
+              <span class="categoria">Carreira</span>
+              <h3><a href="#">Como aprender algo novo sem abandonar na segunda semana</a></h3>
+              <p>Estratégias práticas para manter a constância quando a empolgação inicial passa.</p>
+              <div class="card__rodape">
+                <span>29 set 2026</span>
+                <span>6 min</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__capa capa-6"></div>
+            <div class="card__corpo">
+              <span class="categoria">Viagens</span>
+              <h3><a href="#">Guia rápido para viajar leve com apenas uma mochila</a></h3>
+              <p>O que levar, o que deixar em casa e como evitar o excesso de bagagem.</p>
+              <div class="card__rodape">
+                <span>21 set 2026</span>
+                <span>5 min</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <nav class="paginacao" aria-label="Paginação">
+          <a href="#" class="ativa">1</a>
+          <a href="#">2</a>
+          <a href="#">3</a>
+          <a href="#">Próxima →</a>
+        </nav>
+      </section>
+
+      <aside class="lateral">
+        <div class="widget" id="sobre">
+          <div class="avatar" aria-hidden="true">AS</div>
+          <h3>Sobre a autora</h3>
+          <p>Oi, eu sou a Ana! Escrevo sobre ideias, viagens e o dia a dia desde 2020. Este é o meu cantinho para pensar em voz alta.</p>
+        </div>
+
+        <div class="widget">
+          <h3>Categorias</h3>
+          <ul class="lista-categorias">
+            <li><a href="#">Viagens <span>6</span></a></li>
+            <li><a href="#">Tecnologia <span>9</span></a></li>
+            <li><a href="#">Cotidiano <span>5</span></a></li>
+            <li><a href="#">Livros <span>7</span></a></li>
+            <li><a href="#">Carreira <span>5</span></a></li>
+          </ul>
+        </div>
+
+        <div class="widget">
+          <h3>Tags populares</h3>
+          <div class="tags">
+            <a href="#">produtividade</a>
+            <a href="#">escrita</a>
+            <a href="#">minimalismo</a>
+            <a href="#">leitura</a>
+            <a href="#">rotina</a>
+            <a href="#">estrada</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="newsletter" id="newsletter">
+      <div class="container newsletter__conteudo">
+        <h2>Receba os novos textos no seu e-mail</h2>
+        <p>Um e-mail por semana, sem spam. Cancele quando quiser.</p>
+        <form class="newsletter__form" onsubmit="event.preventDefault(); alert('Obrigado por se inscrever!');">
+          <label for="email" class="sr-only">Seu e-mail</label>
+          <input type="email" id="email" placeholder="seu@email.com" required>
+          <button type="submit">Inscrever-se</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape" id="contato">
+    <div class="container rodape__conteudo">
+      <div>
+        <a href="#" class="logo logo--claro">Blog<span>sem</span>Filtro</a>
+        <p>Ideias, viagens e cotidiano.</p>
+      </div>
+      <div class="rodape__links">
+        <a href="#">Instagram</a>
+        <a href="#">Twitter</a>
+        <a href="#">LinkedIn</a>
+        <a href="mailto:contato@exemplo.com">Blogsemfiltro@outlook.com</a>
+      </div>
+    </div>
+    <p class="rodape__copy">© 2026 BlogsemFiltro. Todos os direitos reservados.</p>
+  </footer>
+
+</body>
+</html>
